@@ -2,6 +2,7 @@ const { HashTable } = require("./structures/HashTable");
 const { Graph } = require("./structures/Graph");
 const { Heap } = require("./structures/Heap");
 const { AVLTree } = require("./structures/AVLTree");
+const { mergeSort } = require("./structures/MergeSort");
 
 /**
  * Reúne os dados carregados dos CSV e as estruturas montadas a partir deles.
@@ -24,6 +25,7 @@ class SocialNetwork {
     // Posição 0 fica sem uso para que o índice seja o próprio id.
     this.usersById = new Array(this.userCount + 1).fill(null);
     this.postCount = new Array(this.userCount + 1).fill(0);
+    this.likesReceived = new Array(this.userCount + 1).fill(0);
 
     // Tabela hash: "@usuario" -> id.
     this.userIndex = new HashTable();
@@ -49,6 +51,7 @@ class SocialNetwork {
       this.posts.push(post);
       this.postsByDate.insert(date, post);
       this.postCount[post.authorId]++;
+      this.likesReceived[post.authorId] += post.likes;
     }
   }
 
@@ -286,6 +289,48 @@ class SocialNetwork {
         handle: this.usersById[post.authorId].handle,
         likes: post.likes,
         text: post.text,
+      };
+    }
+    return result;
+  }
+
+  /**
+   * RANKING: todos os usuários ordenados por engajamento, do maior para o menor.
+   * engajamento = seguidores * 2 + soma das curtidas dos posts do usuário.
+   * Empate: ordem alfabética do @usuario.
+   *
+   * Complexidade: O(V log V) do Merge Sort. Seguidores e curtidas já estão prontos
+   * (grafo e array somado no construtor), então calcular o engajamento é O(V).
+   *
+   * @returns {{position: number, handle: string, name: string, followers: number,
+   *   likes: number, engagement: number}[]} todos os usuários, do 1º ao último
+   */
+  ranking() {
+    const engagement = new Array(this.userCount + 1).fill(0);
+    const ids = new Array(this.userCount);
+    for (let id = 1; id <= this.userCount; id++) {
+      engagement[id] = this.graph.followerCount(id) * 2 + this.likesReceived[id];
+      ids[id - 1] = id;
+    }
+
+    const sortedIds = mergeSort(ids, (a, b) => {
+      if (engagement[a] !== engagement[b]) return engagement[b] - engagement[a];
+      const handleA = this.usersById[a].handle;
+      const handleB = this.usersById[b].handle;
+      if (handleA < handleB) return -1;
+      return handleA > handleB ? 1 : 0;
+    });
+
+    const result = new Array(sortedIds.length);
+    for (let i = 0; i < sortedIds.length; i++) {
+      const id = sortedIds[i];
+      result[i] = {
+        position: i + 1,
+        handle: this.usersById[id].handle,
+        name: this.usersById[id].name,
+        followers: this.graph.followerCount(id),
+        likes: this.likesReceived[id],
+        engagement: engagement[id],
       };
     }
     return result;

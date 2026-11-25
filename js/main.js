@@ -201,6 +201,42 @@ function runTopLiked(network, kText) {
   return true;
 }
 
+/**
+ * Mostra os 20 primeiros do ranking de engajamento e, se pedido, a posição de um usuário
+ * (comando RANKING).
+ *
+ * @param {SocialNetwork} network rede já montada
+ * @param {string|undefined} handle @usuario opcional cuja posição será mostrada
+ * @returns {boolean} true se o comando deu certo
+ */
+function runRanking(network, handle) {
+  if (handle !== undefined && network.findUserId(handle) === null) {
+    console.log(`Usuário ${handle} não encontrado.`);
+    return false;
+  }
+  const ranking = network.ranking();
+  const shown = Math.min(20, ranking.length);
+  console.log("Ranking de engajamento (seguidores x 2 + curtidas):");
+  for (let i = 0; i < shown; i++) {
+    const r = ranking[i];
+    console.log(`  ${r.position}. ${r.handle} (${r.name}): ${r.engagement}  [${r.followers} seguidores, ${r.likes} curtidas]`);
+  }
+
+  if (handle !== undefined) {
+    // Busca linear pela posição: O(V), menor que o O(V log V) da ordenação.
+    const id = network.findUserId(handle);
+    const target = network.usersById[id].handle;
+    for (const r of ranking) {
+      if (r.handle === target) {
+        console.log(`${r.handle} está em ${r.position}º de ${ranking.length}, com engajamento ${r.engagement}` +
+          ` [${r.followers} seguidores, ${r.likes} curtidas].`);
+        break;
+      }
+    }
+  }
+  return true;
+}
+
 function main() {
   const [usuarios, seguidores, posts] = aedlib.socialCarregarDados();
   // usuarios:   [id, usuario, nome, data_cadastro]
@@ -215,7 +251,7 @@ function main() {
     console.log(`Conexões carregadas:  ${seguidores.length}`);
     console.log(`Posts carregados:     ${posts.length}`);
     console.log("Comandos disponíveis: buscar @usuario | sugerir @usuario k | comunidades | posts-entre data1 data2");
-    console.log("                      top-seguidos k | top-curtidos k");
+    console.log("                      top-seguidos k | top-curtidos k | ranking [@usuario]");
     return;
   }
 
@@ -232,6 +268,8 @@ function main() {
     ok = runTopFollowed(network, args[0]);
   } else if (command.toLowerCase() === "top-curtidos" || command.toLowerCase() === "top_curtidos") {
     ok = runTopLiked(network, args[0]);
+  } else if (command.toLowerCase() === "ranking") {
+    ok = runRanking(network, args[0]);
   } else {
     console.log(`Comando desconhecido: ${command}`);
     ok = false;
