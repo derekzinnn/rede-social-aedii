@@ -145,7 +145,7 @@ class SocialNetwork {
 
   /**
    * Seleciona os k melhores itens de uma lista, do melhor para o pior, usando uma heap.
-   * Usado pelo SUGERIR.
+   * É a base de SUGERIR, TOP_SEGUIDOS e TOP_CURTIDOS.
    *
    * Usa heap de MÍNIMO limitada a k itens: o topo é sempre o pior dos k melhores vistos até agora.
    * Cada item novo entra na heap; se ela passar de k, o topo (o pior) sai.
@@ -171,6 +171,66 @@ class SocialNetwork {
     const result = new Array(heap.size());
     for (let i = result.length - 1; i >= 0; i--) {
       result[i] = heap.pop();
+    }
+    return result;
+  }
+
+  /**
+   * TOP_SEGUIDOS k: os k usuários com mais seguidores.
+   * Empate: ordem alfabética do @usuario.
+   *
+   * Complexidade: O(V log k). O número de seguidores de cada um sai em O(1) do grafo.
+   *
+   * @param {number} k quantidade (inteiro >= 1); se for maior que o total, vêm todos
+   * @returns {{handle: string, name: string, followers: number}[]} do mais seguido para o menos
+   */
+  topFollowed(k) {
+    const ids = new Array(this.userCount);
+    for (let i = 0; i < this.userCount; i++) ids[i] = i + 1;
+
+    const isWorse = (a, b) => {
+      const followersA = this.graph.followerCount(a);
+      const followersB = this.graph.followerCount(b);
+      if (followersA !== followersB) return followersA < followersB;
+      return this.usersById[a].handle > this.usersById[b].handle;
+    };
+
+    const best = this.topK(ids, k, isWorse);
+    const result = new Array(best.length);
+    for (let i = 0; i < best.length; i++) {
+      const user = this.usersById[best[i]];
+      result[i] = { handle: user.handle, name: user.name, followers: this.graph.followerCount(best[i]) };
+    }
+    return result;
+  }
+
+  /**
+   * TOP_CURTIDOS k: os k posts com mais curtidas.
+   * Empate: o post mais antigo (menor id) vem primeiro.
+   *
+   * Complexidade: O(P log k), com P posts.
+   *
+   * @param {number} k quantidade (inteiro >= 1); se for maior que o total, vêm todos
+   * @returns {{id: number, handle: string, date: string, likes: number, text: string}[]}
+   *   do mais curtido para o menos
+   */
+  topLiked(k) {
+    const isWorse = (a, b) => {
+      if (a.likes !== b.likes) return a.likes < b.likes;
+      return a.id > b.id;
+    };
+
+    const best = this.topK(this.posts, k, isWorse);
+    const result = new Array(best.length);
+    for (let i = 0; i < best.length; i++) {
+      const post = best[i];
+      result[i] = {
+        id: post.id,
+        handle: this.usersById[post.authorId].handle,
+        date: post.date,
+        likes: post.likes,
+        text: post.text,
+      };
     }
     return result;
   }

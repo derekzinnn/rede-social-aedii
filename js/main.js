@@ -151,6 +151,56 @@ function runPostsBetween(network, from, to) {
   return true;
 }
 
+/**
+ * Mostra os k usuários com mais seguidores (comando TOP_SEGUIDOS).
+ *
+ * @param {SocialNetwork} network rede já montada
+ * @param {string|undefined} kText quantidade, como foi digitada
+ * @returns {boolean} true se o comando deu certo
+ */
+function runTopFollowed(network, kText) {
+  const k = parsePositiveInt(kText);
+  if (k === null) {
+    console.log("Uso: top-seguidos k   (k inteiro maior que zero)");
+    return false;
+  }
+  const users = network.topFollowed(k);
+  console.log(`Top ${users.length} usuários com mais seguidores:`);
+  for (let i = 0; i < users.length; i++) {
+    const u = users[i];
+    console.log(`  ${i + 1}. ${u.handle} (${u.name}): ${u.followers} seguidores`);
+  }
+  if (users.length < k) {
+    console.log(`Só existem ${users.length} usuários (pedidos: ${k}).`);
+  }
+  return true;
+}
+
+/**
+ * Mostra os k posts com mais curtidas (comando TOP_CURTIDOS).
+ *
+ * @param {SocialNetwork} network rede já montada
+ * @param {string|undefined} kText quantidade, como foi digitada
+ * @returns {boolean} true se o comando deu certo
+ */
+function runTopLiked(network, kText) {
+  const k = parsePositiveInt(kText);
+  if (k === null) {
+    console.log("Uso: top-curtidos k   (k inteiro maior que zero)");
+    return false;
+  }
+  const posts = network.topLiked(k);
+  console.log(`Top ${posts.length} posts com mais curtidas:`);
+  for (let i = 0; i < posts.length; i++) {
+    const p = posts[i];
+    console.log(`  ${i + 1}. ${p.likes} curtidas  #${p.id}  ${p.handle}  ${p.date}  ${p.text}`);
+  }
+  if (posts.length < k) {
+    console.log(`Só existem ${posts.length} posts (pedidos: ${k}).`);
+  }
+  return true;
+}
+
 function main() {
   const [usuarios, seguidores, posts] = aedlib.socialCarregarDados();
   // usuarios:   [id, usuario, nome, data_cadastro]
@@ -165,6 +215,7 @@ function main() {
     console.log(`Conexões carregadas:  ${seguidores.length}`);
     console.log(`Posts carregados:     ${posts.length}`);
     console.log("Comandos disponíveis: buscar @usuario | sugerir @usuario k | comunidades | posts-entre data1 data2");
+    console.log("                      top-seguidos k | top-curtidos k");
     return;
   }
 
@@ -177,6 +228,10 @@ function main() {
     ok = runCommunities(network);
   } else if (command.toLowerCase() === "posts-entre" || command.toLowerCase() === "posts_entre") {
     ok = runPostsBetween(network, args[0], args[1]);
+  } else if (command.toLowerCase() === "top-seguidos" || command.toLowerCase() === "top_seguidos") {
+    ok = runTopFollowed(network, args[0]);
+  } else if (command.toLowerCase() === "top-curtidos" || command.toLowerCase() === "top_curtidos") {
+    ok = runTopLiked(network, args[0]);
   } else {
     console.log(`Comando desconhecido: ${command}`);
     ok = false;
