@@ -1,6 +1,7 @@
 const { HashTable } = require("./structures/HashTable");
 const { Graph } = require("./structures/Graph");
 const { Heap } = require("./structures/Heap");
+const { AVLTree } = require("./structures/AVLTree");
 
 /**
  * Reúne os dados carregados dos CSV e as estruturas montadas a partir deles.
@@ -39,9 +40,15 @@ class SocialNetwork {
       this.graph.addEdge(Number(follower), Number(followed));
     }
 
-
-    for (const post of posts) {
-      this.postCount[Number(post[1])]++;
+    // Posts: guardados como objetos e indexados por data na árvore AVL.
+    // Como o CSV vem em ordem de id, posts do mesmo dia ficam em ordem de id dentro do nó.
+    this.posts = [];
+    this.postsByDate = new AVLTree();
+    for (const [id, authorId, date, likes, text] of posts) {
+      const post = { id: Number(id), authorId: Number(authorId), date, likes: Number(likes), text };
+      this.posts.push(post);
+      this.postsByDate.insert(date, post);
+      this.postCount[post.authorId]++;
     }
   }
 
@@ -196,6 +203,32 @@ class SocialNetwork {
       sizes[i] = heap.pop();
     }
     return { total: sizes.length, isolated, sizes };
+  }
+
+  /**
+   * POSTS_ENTRE data1 data2: posts publicados no intervalo, com as duas datas incluídas,
+   * em ordem cronológica (no mesmo dia, em ordem de id).
+   *
+   * Complexidade: O(log D + m), com D datas distintas na árvore e m posts devolvidos.
+   *
+   * @param {string} from data inicial "AAAA-MM-DD" (já validada, from <= to)
+   * @param {string} to data final "AAAA-MM-DD"
+   * @returns {{id: number, date: string, handle: string, likes: number, text: string}[]}
+   */
+  postsBetween(from, to) {
+    const found = this.postsByDate.rangeQuery(from, to);
+    const result = new Array(found.length);
+    for (let i = 0; i < found.length; i++) {
+      const post = found[i];
+      result[i] = {
+        id: post.id,
+        date: post.date,
+        handle: this.usersById[post.authorId].handle,
+        likes: post.likes,
+        text: post.text,
+      };
+    }
+    return result;
   }
 
   /**

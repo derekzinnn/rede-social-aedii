@@ -105,6 +105,52 @@ function runCommunities(network) {
   return true;
 }
 
+/**
+ * Confere se o texto é uma data real no formato AAAA-MM-DD (ex.: recusa 2025-02-30 e 2025-13-01).
+ *
+ * @param {string|undefined} text texto digitado
+ * @returns {boolean}
+ */
+function isValidDate(text) {
+  if (text === undefined || !/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
+  const year = Number(text.slice(0, 4));
+  const month = Number(text.slice(5, 7));
+  const day = Number(text.slice(8, 10));
+  if (month < 1 || month > 12 || day < 1) return false;
+  const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  const daysInMonth = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return day <= daysInMonth[month - 1];
+}
+
+/**
+ * Lista os posts entre duas datas, inclusive (comando POSTS_ENTRE).
+ * Se as datas vierem invertidas, troca e avisa.
+ *
+ * @param {SocialNetwork} network rede já montada
+ * @param {string|undefined} from data inicial
+ * @param {string|undefined} to data final
+ * @returns {boolean} true se o comando deu certo
+ */
+function runPostsBetween(network, from, to) {
+  if (!isValidDate(from) || !isValidDate(to)) {
+    console.log("Uso: posts-entre AAAA-MM-DD AAAA-MM-DD   (datas válidas, ex.: 2025-03-01 2025-03-31)");
+    return false;
+  }
+  if (from > to) {
+    console.log(`Datas invertidas: buscando de ${to} a ${from}.`);
+    const temp = from;
+    from = to;
+    to = temp;
+  }
+  const posts = network.postsBetween(from, to);
+  for (const post of posts) {
+    const likesLabel = post.likes === 1 ? "curtida" : "curtidas";
+    console.log(`  ${post.date}  #${post.id}  ${post.handle}  (${post.likes} ${likesLabel})  ${post.text}`);
+  }
+  console.log(`${posts.length} posts entre ${from} e ${to}.`);
+  return true;
+}
+
 function main() {
   const [usuarios, seguidores, posts] = aedlib.socialCarregarDados();
   // usuarios:   [id, usuario, nome, data_cadastro]
@@ -118,7 +164,7 @@ function main() {
     console.log(`Usuários carregados:  ${usuarios.length}`);
     console.log(`Conexões carregadas:  ${seguidores.length}`);
     console.log(`Posts carregados:     ${posts.length}`);
-    console.log("Comandos disponíveis: buscar @usuario | sugerir @usuario k | comunidades");
+    console.log("Comandos disponíveis: buscar @usuario | sugerir @usuario k | comunidades | posts-entre data1 data2");
     return;
   }
 
@@ -129,6 +175,8 @@ function main() {
     ok = runSuggest(network, args[0], args[1]);
   } else if (command.toLowerCase() === "comunidades") {
     ok = runCommunities(network);
+  } else if (command.toLowerCase() === "posts-entre" || command.toLowerCase() === "posts_entre") {
+    ok = runPostsBetween(network, args[0], args[1]);
   } else {
     console.log(`Comando desconhecido: ${command}`);
     ok = false;
