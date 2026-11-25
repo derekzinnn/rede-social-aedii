@@ -169,6 +169,36 @@ class SocialNetwork {
   }
 
   /**
+   * COMUNIDADES: componentes conexos da rede, com "seguir" tratado como ligação não dirigida.
+   *
+   * Um usuário isolado (não segue ninguém e não tem seguidores) forma sozinho um componente
+   * de tamanho 1. O contrário também vale: como ninguém segue a si mesmo, todo componente
+   * de tamanho 1 é um usuário isolado. Por isso os isolados são contados pelos tamanhos.
+   *
+   * Complexidade: O(V + E) da BFS + O(C log C) para pôr os C tamanhos em ordem com a heap.
+   *
+   * @returns {{total: number, isolated: number, sizes: number[]}} total de comunidades
+   *   (isolados incluídos), quantos isolados e os tamanhos da maior para a menor
+   */
+  communities() {
+    const sizesFound = this.graph.connectedComponents();
+
+    // Heap de MÁXIMO: o maior tamanho fica no topo, então os pops saem do maior para o menor.
+    const heap = new Heap((a, b) => a > b);
+    let isolated = 0;
+    for (const size of sizesFound) {
+      heap.push(size);
+      if (size === 1) isolated++;
+    }
+
+    const sizes = new Array(heap.size());
+    for (let i = 0; i < sizes.length; i++) {
+      sizes[i] = heap.pop();
+    }
+    return { total: sizes.length, isolated, sizes };
+  }
+
+  /**
    * Compara duas sugestões: true se a é pior que b (menos conexões em comum ou,
    * no empate, @usuario que vem depois na ordem alfabética).
    *

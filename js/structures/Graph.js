@@ -77,6 +77,58 @@ class Graph {
   followerCount(id) {
     return this.followers[id].length;
   }
+
+  /**
+   * Encontra os componentes conexos tratando cada aresta como NÃO dirigida:
+   * se A segue B, A e B ficam ligados nos dois sentidos.
+   *
+   * Faz uma BFS a partir de cada vértice ainda não visitado; tudo o que essa BFS
+   * alcança forma um componente. Cada vértice entra na fila uma única vez e cada aresta
+   * é olhada duas vezes (uma por ponta), então a complexidade é O(V + E).
+   *
+   * @returns {number[]} tamanho de cada componente, na ordem em que foram encontrados
+   */
+  connectedComponents() {
+    const visited = new Array(this.vertexCount + 1).fill(false);
+    const sizes = [];
+
+    // Fila da BFS: um array só, com "head" apontando o próximo a sair.
+    // Não uso shift(), que reposiciona o array inteiro a cada chamada (O(n)).
+    // Como cada vértice entra na fila uma vez só, o array nunca passa de V posições.
+    const queue = new Array(this.vertexCount);
+
+    for (let start = 1; start <= this.vertexCount; start++) {
+      if (visited[start]) continue;
+
+      // Nova BFS: o vértice é marcado ao ENTRAR na fila, não ao sair.
+      // Assim ninguém é enfileirado duas vezes, mesmo sendo vizinho de vários.
+      let head = 0;
+      let tail = 0;
+      queue[tail++] = start;
+      visited[start] = true;
+
+      while (head < tail) {
+        const current = queue[head++];
+        // Vizinhos não dirigidos = quem current segue + quem segue current.
+        for (const neighbor of this.following[current]) {
+          if (!visited[neighbor]) {
+            visited[neighbor] = true;
+            queue[tail++] = neighbor;
+          }
+        }
+        for (const neighbor of this.followers[current]) {
+          if (!visited[neighbor]) {
+            visited[neighbor] = true;
+            queue[tail++] = neighbor;
+          }
+        }
+      }
+
+      // tail = quantos vértices entraram na fila nesta BFS = tamanho do componente.
+      sizes.push(tail);
+    }
+    return sizes;
+  }
 }
 
 module.exports = { Graph };
