@@ -9,6 +9,24 @@
 const aedlib = require("./aedlib"); // biblioteca base do projeto (obrigatória - não remova)
 const { SocialNetwork } = require("./SocialNetwork");
 
+// No PowerShell, "@nome" é o operador de splatting e some antes de chegar ao programa.
+const POWERSHELL_HINT = '  (no PowerShell, use aspas: "@usuario", ou escreva sem o @)';
+
+/**
+ * Devolve o @usuario no formato da base (ex.: "Renata_Dias" vira "@renata_dias").
+ * Se o usuário não existir, só garante o "@" na frente do que foi digitado.
+ *
+ * @param {SocialNetwork} network rede já montada
+ * @param {string} typed o @usuario como foi digitado
+ * @returns {string}
+ */
+function formatHandle(network, typed) {
+  const id = network.findUserId(typed);
+  if (id !== null) return network.usersById[id].handle;
+  const trimmed = typed.trim();
+  return trimmed.startsWith("@") ? trimmed : "@" + trimmed;
+}
+
 /**
  * Mostra o perfil de um usuário (comando BUSCAR) ou avisa que ele não existe.
  *
@@ -19,11 +37,12 @@ const { SocialNetwork } = require("./SocialNetwork");
 function runFindUser(network, handle) {
   if (!handle) {
     console.log("Uso: buscar @usuario");
+    console.log(POWERSHELL_HINT);
     return false;
   }
   const profile = network.findUser(handle);
   if (profile === null) {
-    console.log(`Usuário ${handle} não encontrado.`);
+    console.log(`Usuário ${formatHandle(network, handle)} não encontrado.`);
     return false;
   }
   console.log(profile.handle);
@@ -59,18 +78,20 @@ function runSuggest(network, handle, kText) {
   const k = parsePositiveInt(kText);
   if (!handle || k === null) {
     console.log("Uso: sugerir @usuario k   (k inteiro maior que zero)");
+    console.log(POWERSHELL_HINT);
     return false;
   }
   const suggestions = network.suggest(handle, k);
+  const shownHandle = formatHandle(network, handle);
   if (suggestions === null) {
-    console.log(`Usuário ${handle} não encontrado.`);
+    console.log(`Usuário ${shownHandle} não encontrado.`);
     return false;
   }
   if (suggestions.length === 0) {
-    console.log(`Nenhuma sugestão para ${handle}: não há ninguém a distância 2 no grafo.`);
+    console.log(`Nenhuma sugestão para ${shownHandle}: não há ninguém a distância 2 no grafo.`);
     return true;
   }
-  console.log(`Sugestões para ${handle}:`);
+  console.log(`Sugestões para ${shownHandle}:`);
   for (let i = 0; i < suggestions.length; i++) {
     const s = suggestions[i];
     console.log(`  ${i + 1}. ${s.handle} (${s.name}): ${s.common} em comum`);
@@ -211,7 +232,7 @@ function runTopLiked(network, kText) {
  */
 function runRanking(network, handle) {
   if (handle !== undefined && network.findUserId(handle) === null) {
-    console.log(`Usuário ${handle} não encontrado.`);
+    console.log(`Usuário ${formatHandle(network, handle)} não encontrado.`);
     return false;
   }
   const ranking = network.ranking();
@@ -252,6 +273,7 @@ function main() {
     console.log(`Posts carregados:     ${posts.length}`);
     console.log("Comandos disponíveis: buscar @usuario | sugerir @usuario k | comunidades | posts-entre data1 data2");
     console.log("                      top-seguidos k | top-curtidos k | ranking [@usuario]");
+    console.log(POWERSHELL_HINT);
     return;
   }
 
